@@ -4,14 +4,16 @@ Definition of :class:`Lightcurve`.
 :class:`Lightcurve` is used to create light curves out of photon counting data
 or to save existing light curves in a class that's easy to use.
 """
+import numpy as np
+import stingray.utils as utils
+from stingray.utils import simon
+import logging
 
 __all__ = ["Lightcurve"]
 
-import numpy as np
-import stingray.utils as utils
 
 class Lightcurve(object):
-    def __init__(self, time, counts):
+    def __init__(self, time, counts, input_counts=True):
         """
         Make a light curve object from an array of time stamps and an
         array of counts.
@@ -26,6 +28,10 @@ class Lightcurve(object):
             bins defined in `time` (note: **not** the count rate, i.e.
             counts/second, but the counts/bin).
 
+        input_counts: bool, optional, default True
+            If True, the code assumes that the input data in 'counts'
+            is in units of counts/bin. If False, it assumes the data
+            in 'counts' is in counts/second.
 
         Attributes
         ----------
@@ -53,18 +59,33 @@ class Lightcurve(object):
         """
 
         assert np.all(np.isfinite(time)), "There are inf or NaN values in " \
-                                            "your time array!"
+                                          "your time array!"
 
         assert np.all(np.isfinite(counts)), "There are inf or NaN values in " \
                                             "your counts array!"
 
         self.time = np.asarray(time)
-        self.counts = np.asarray(counts)
-        self.ncounts = self.counts.shape[0]
         self.dt = time[1] - time[0]
-        self.countrate = self.counts/self.dt
+
+        if input_counts:
+            self.counts = np.asarray(counts)
+            self.countrate = self.counts / self.dt
+        else:
+            self.countrate = np.asarray(counts)
+            self.counts = self.countrate * self.dt
+
+        self.ncounts = self.counts.shape[0]
+
+        # Issue a warning if the input time iterable isn't regularly spaced,
+        # i.e. the bin sizes aren't equal throughout.
+        dt_array = np.diff(self.time)
+        if not (np.allclose(dt_array, np.repeat(self.dt, dt_array.shape[0]))):
+            simon("Bin sizes in input time array aren't equal throughout! "
+                  "This could cause problems with Fourier transforms. "
+                  "Please make the input time evenly sampled.")
+
         self.tseg = self.time[-1] - self.time[0] + self.dt
-        self.tstart = self.time[0]-0.5*self.dt
+        self.tstart = self.time[0] - 0.5*self.dt
 
     @staticmethod
     def make_lightcurve(toa, dt, tseg=None, tstart=None):
@@ -86,8 +107,8 @@ class Lightcurve(object):
             be the interval between the arrival between the first and the last
             photon in `toa`.
 
-                **Note**: If tseg is not divisible by dt (i.e. if tseg/dt is not
-                an integer number), then the last fractional bin will be
+                **Note**: If tseg is not divisible by dt (i.e. if tseg/dt is
+                not an integer number), then the last fractional bin will be
                 dropped!
 
         tstart: float, optional, default None
@@ -102,27 +123,31 @@ class Lightcurve(object):
 
         """
 
-        ## tstart is an optional parameter to set a starting time for
-        ## the light curve in case this does not coincide with the first photon
+        # tstart is an optional parameter to set a starting time for
+        # the light curve in case this does not coincide with the first photon
         if tstart is None:
-            ## if tstart is not set, assume light curve starts with first photon
+            # if tstart is not set, assume light curve starts with first photon
             tstart = toa[0]
 
-        ## compute the number of bins in the light curve
-        ## for cases where tseg/dt are not integer, computer one
-        ## last time bin more that we have to subtract in the end
+        # compute the number of bins in the light curve
+        # for cases where tseg/dt are not integer, computer one
+        # last time bin more that we have to subtract in the end
         if tseg is None:
             tseg = toa[-1] - toa[0]
 
+        logging.info("make_lightcurve: tseg: " + str(tseg))
+
         timebin = np.int(tseg/dt)
+        logging.info("make_lightcurve: timebin:  " + str(timebin))
 
         tend = tstart + timebin*dt
 
-        counts, histbins = np.histogram(toa, bins=timebin, range=[tstart, tend])
+        counts, histbins = np.histogram(toa, bins=timebin,
+                                        range=[tstart, tend])
 
-        dt = histbins[1]-histbins[0]
+        dt = histbins[1] - histbins[0]
 
-        time = histbins[:-1]+0.5*dt
+        time = histbins[:-1] + 0.5*dt
 
         counts = np.asarray(counts)
 
