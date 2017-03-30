@@ -315,7 +315,7 @@ class PSDLogLikelihood(LogLikelihood):
                       np.sum(self.y/mean_model)
 
         else:
-            loglike = -2.0*self.ps.m*(np.sum(np.log(mean_model)) +
+            loglike = -2.0*self.m*(np.sum(np.log(mean_model)) +
                                np.sum(self.y/mean_model) +
                                np.sum((2.0 / (2. * self.m) - 1.0) *
                                       np.log(self.y)))
