@@ -67,7 +67,7 @@ class TestParameterEstimation(object):
         assert pe.max_post is True, "max_post should be set to True as a default."
 
     def test_object_works_with_loglikelihood_object(self):
-        llike = PSDLogLikelihood(self.ps.freq, self.ps.power, self.model)
+        llike = PSDLogLikelihood(self.ps, self.model)
         pe = ParameterEstimation()
         res = pe.fit(llike, [2.0])
 
@@ -739,7 +739,7 @@ class TestPSDParEst(object):
         pe = PSDParEst(self.ps, max_post=True)
 
         assert pe.max_post is True
-        delta_deviance = pe.compute_lrt(self.lpost, t0, self.lpost, t0)
+        delta_deviance, _, _ = pe.compute_lrt(self.lpost, t0, self.lpost, t0)
 
         assert pe.max_post is False
 
@@ -749,7 +749,7 @@ class TestPSDParEst(object):
         pe = PSDParEst(self.ps, max_post=True)
 
         # MB: This is a little too random
-        delta_deviance = pe.compute_lrt(self.lpost, t0,
+        delta_deviance, _, _ = pe.compute_lrt(self.lpost, t0,
                                         self.lpost, t0)
 
         assert np.absolute(delta_deviance) < 1.5e-4

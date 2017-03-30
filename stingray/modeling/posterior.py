@@ -275,17 +275,14 @@ class PoissonLogLikelihood(LogLikelihood):
 
 class PSDLogLikelihood(LogLikelihood):
 
-    def __init__(self, x, y, model, m=1):
+    def __init__(self, ps, model):
         """
         A Gaussian likelihood.
 
         Parameters
         ----------
-        x : iterable
-            x-coordinate of the data
-
-        y : iterable
-            y-coordinte of the data
+        ps: {Powerspectrum | AveragedPowerspectrum} instance
+            the Powerspectrum object containing the data
 
         model: an Astropy Model instance
             The model to use in the likelihood.
@@ -295,10 +292,9 @@ class PSDLogLikelihood(LogLikelihood):
 
         """
 
-        self.x = x
-        self.y = y
-        self.model = model
-        self.m = m
+        LogLikelihood.__init__(self, ps.freq, ps.power, model)
+
+        self.m = ps.m
         self.npar = 0
         for pname in self.model.param_names:
             if not self.model.fixed[pname]:
@@ -319,7 +315,7 @@ class PSDLogLikelihood(LogLikelihood):
                       np.sum(self.y/mean_model)
 
         else:
-            loglike = -2.0*self.m*(np.sum(np.log(mean_model)) +
+            loglike = -2.0*self.ps.m*(np.sum(np.log(mean_model)) +
                                np.sum(self.y/mean_model) +
                                np.sum((2.0 / (2. * self.m) - 1.0) *
                                       np.log(self.y)))
@@ -471,9 +467,8 @@ class PSDPosterior(Posterior):
                for a maximum likelihood-style analysis, no prior is required.
 
         """
-        self.loglikelihood = PSDLogLikelihood(ps.freq,
-                                              ps.power,
-                                              model, m=ps.m)
+        self.loglikelihood = PSDLogLikelihood(ps,
+                                              model)
 
         self.m = ps.m
         Posterior.__init__(self, ps.freq, ps.power, model)
