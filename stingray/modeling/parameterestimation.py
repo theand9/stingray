@@ -449,7 +449,8 @@ class ParameterEstimation(object):
             res.print_results()
 
         if plot:
-            res.plot_results(namestr + "_corner.pdf")
+            fig = res.plot_results(fig=None, save_plot=True,
+                                   filename=namestr + "_corner.pdf")
 
         return res
 
