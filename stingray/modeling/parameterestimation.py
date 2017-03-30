@@ -43,7 +43,6 @@ from stingray.modeling.posterior import Posterior, LogLikelihood
 from astropy.modeling.fitting import _fitter_to_model_params, \
     _model_to_fit_params, _validate_model, _convert_input
 
-
 class OptimizationResults(object):
 
     def __init__(self, lpost, res, neg=True):
@@ -358,7 +357,7 @@ class ParameterEstimation(object):
         # compute log likelihood ratio as difference between the deviances
         lrt = res1.deviance - res2.deviance
 
-        return lrt
+        return lrt, res1, res2
 
     def sample(self, lpost, t0, cov=None,
                nwalkers=500, niter=100, burnin=100, threads=1,
@@ -370,10 +369,14 @@ class ParameterEstimation(object):
 
         Parameters
         ----------
+        lpost : instance of a Posterior subclass
+            and instance of class Posterior or one of its subclasses
+            that defines the function to be minized (either in loglikelihood
+            or logposterior)
+
         t0 : iterable
             list or array containing the starting parameters. Its length
             must match `lpost.model.npar`.
-
 
         nwalkers : int
             The number of walkers (chains) to use during the MCMC procedure.
@@ -449,6 +452,175 @@ class ParameterEstimation(object):
             res.plot_results(namestr + "_corner.pdf")
 
         return res
+
+    def _generate_model(self, lpost, pars):
+        """
+        Helper function that generates a fake PSD similar to the
+        one in the data, but with different parameters.
+
+        Parameters
+        ----------
+        lpost : instance of a Posterior or LogLikelihood subclass
+            The object containing the relevant information about the
+            data and the model
+
+        pars : iterable
+            A list of parameters to be passed to lpost.model in oder
+            to generate a model data set.
+
+        Returns:
+        --------
+        model_data : numpy.ndarray
+            An array of model values for each bin in lpost.x
+
+        """
+        # get the model
+        m = lpost.model
+
+        # reset the parameters
+        _fitter_to_model_params(m, pars)
+
+        # make a model spectrum
+        model_data = lpost.model(lpost.x)
+
+        return model_data
+
+    @staticmethod
+    def _compute_pvalue(obs_val, sim):
+        """
+        Compute the p-value given an observed value of a test statistic
+        and some simulations of that same test statistic.
+
+        Parameters
+        ----------
+        obs_value : float
+            The observed value of the test statistic in question
+
+        sim: iterable
+            A list or array of simulated values for the test statistic
+
+        Returns
+        -------
+        pval : float [0, 1]
+            The p-value for the test statistic given the simulations.
+
+        """
+
+        # cast the simulations as a numpy array
+        sim = np.array(sim)
+
+        # find all simulations that are larger than
+        # the observed value
+        ntail = sim[sim > obs_val].shape[0]
+
+        # divide by the total number of simulations
+        pval = ntail / sim.shape[0]
+
+        return pval
+
+    def calibrate_lrt(self, lpost1, t1, lpost2, t2, sample=None, neg=True,
+                      max_post=False,
+                      nsim=1000, niter=200, nwalkers=500, burnin=200,
+                      namestr="test"):
+
+        """
+        Calibrate the outcome of a Likelihood Ratio Test via MCMC.
+
+        In order to compare models via likelihood ratio test, one generally
+        aims to compute a p-value for the null hypothesis (generally the
+        simpler model). There are two special cases where the theoretical
+        distribution used to compute that p-value analytically given the
+        observed likelihood ratio (a chi-square distribution) is not
+        applicable:
+        * the models are not nested (i.e. Model 1 is not a special, simpler
+        case of Model 2),
+        * the parameter values fixed in Model 2 to retrieve Model 1 are at the
+        edges of parameter space (e.g. if one must set, say, an amplitude to
+        zero in order to remove a component in the more complex model, and
+        negative amplitudes are excluded a priori)
+
+        In these cases, the observed likelihood ratio must be calibrated via
+         simulations of the simpler model (Model 1), using MCMC to take into
+        account the uncertainty in the parameters. This function does
+        exactly that: it computes the likelihood ratio for the observed data,
+        and produces simulations to calibrate the likelihood ratio and
+        compute a p-value for observing the data under the assumption that
+        Model 1 istrue.
+
+        If `max_post=True`, the code will use MCMC to sample the posterior
+        of the parameters and simulate fake data from there.
+
+        If `max_post=False`, the code will use the covariance matrix derived
+        from the fit to simulate data sets for comparison.
+
+        Parameters
+        ----------
+        lpost1 : object of a subclass of Posterior
+            The posterior object for model 1
+
+        t1 : iterable
+            The starting parameters for model 1
+
+        lpost2 : object of a subclass of Posterior
+            The posterior object for model 2
+
+        t2 : iterable
+            The starting parameters for model 2
+
+        neg : bool, optional, default True
+            Boolean flag to decide whether to use the negative
+            log-likelihood or log-posterior
+
+        max_post: bool, optional, default False
+            If True, set the internal state to do the optimization with the
+            log-likelihood rather than the log-posterior.
+
+
+        Returns
+        -------
+        pvalue : float [0,1]
+            p-value 'n stuff
+
+        """
+
+        # compute the observed likelihood ratio
+        lrt_obs, res1, res2 = self.compute_lrt(lpost1, t1,
+                                               lpost2, t2,
+                                               neg=neg,
+                                               max_post=max_post)
+
+        # simulate parameter sets from the simpler model
+        if not max_post:
+            # using Maximum Likelihood, so I'm going to simulate parameters
+            # from a multivariate Gaussian
+
+            # set up the distribution
+            mvn = scipy.stats.multivariate_normal(mean=res1.p_opt,
+                                                  cov=res1.cov)
+
+            # sample parameters
+            s_all = mvn.rvs(size=nsim)
+
+        else:
+            if not sample:
+                # sample the posterior using MCMC
+                sample = self.sample(lpost1, res1.p_opt, cov=res1.cov,
+                                       nwalkers=nwalkers, niter=niter,
+                                       burnin=burnin, namestr=namestr)
+
+            # pick nsim samples out of the posterior sample
+            s_all = sample[
+                np.random.choice(sample.shape[0], nsim, replace=False)]
+
+        # simulate LRTs
+        # this method is defined in the subclasses!
+        lrt_sim = self.simulate_lrts(s_all, lpost1, t1, lpost2, t2,
+                                      max_post=max_post, neg=neg)
+
+        # now I can compute the p-value:
+        pval = ParameterEstimation._compute_pvalue(lrt_obs, lrt_sim)
+
+        return pval
 
 
 class SamplingResults(object):
@@ -661,6 +833,109 @@ class PSDParEst(ParameterEstimation):
 
         return res
 
+    def _generate_data(self, lpost, pars):
+        """
+        Generate a fake power spectrum from a model.
+
+        Parameters:
+        ----------
+        lpost : instance of a Posterior or LogLikelihood subclass
+            The object containing the relevant information about the
+            data and the model
+
+        pars : iterable
+            A list of parameters to be passed to lpost.model in oder
+            to generate a model data set.
+
+        Returns:
+        --------
+        sim_ps : stingray.Powerspectrum object
+            The simulated Powerspectrum object
+
+        """
+
+        model_spectrum = self._generate_model(lpost, pars)
+
+        # use chi-square distribution to get fake data
+        model_powers = model_spectrum * \
+                       np.random.chisquare(2 * self.ps.m,
+                                           size=model_spectrum.shape[0]) \
+                                                / (2. * self.ps.m)
+
+        sim_ps = copy.copy(self.ps)
+
+        sim_ps.powers = model_powers
+
+        return sim_ps
+
+    def simulate_lrts(self, s_all, lpost1, t1, lpost2, t2, max_post=True,
+                       neg=False):
+
+        nsim = s_all.shape[0]
+        lrt_sim = np.zeros(nsim)
+
+        # now I can loop over all simulated parameter sets to generate a PSD
+        for i, s in enumerate(s_all):
+
+            # generate fake PSD
+            sim_ps = self._generate_data(lpost1, s)
+
+            # make LogLikelihood objects for both:
+            if not max_post:
+                sim_lpost1 = PSDLogLikelihood(sim_ps,
+                                              model=lpost1.model)
+                sim_lpost2 = PSDLogLikelihood(sim_ps,
+                                              model=lpost2.model)
+            else:
+                # make a Posterior object
+                sim_lpost1 = PSDPosterior(sim_ps, lpost1.model,
+                                          priors=lpost1.priors)
+
+                sim_lpost2 = PSDPosterior(sim_ps, lpost2.model,
+                                          priors=lpost2.priors)
+
+            parest_sim = PSDParEst(sim_ps, max_post=max_post)
+
+            lrt_sim[i], _, _ = parest_sim.compute_lrt(sim_lpost1, t1,
+                                                      sim_lpost2, t2,
+                                                      neg=neg,
+                                                      max_post=max_post)
+        return lrt_sim
+
+    def simulate_highest_outlier(self, s_all, lpost, t0, max_post=True,
+                                 neg=False):
+
+        # the number of simulations
+        nsim = s_all.shape[0]
+
+        # empty array for the simulation results
+        max_y_all = np.zeros(nsim)
+
+        # now I can loop over all simulated parameter sets to generate a PSD
+        for i, s in enumerate(s_all):
+
+            # generate fake PSD
+            sim_ps = self._generate_data(lpost, s)
+
+            # make LogLikelihood objects for both:
+            if not max_post:
+                sim_lpost = PSDLogLikelihood(sim_ps,
+                                              model=lpost.model)
+            else:
+                # make a Posterior object
+                sim_lpost = PSDPosterior(sim_ps, lpost.model,
+                                          priors=lpost.priors)
+
+            parest_sim = PSDParEst(sim_ps, max_post=max_post)
+
+            res = parest_sim.fit(sim_lpost, t0, neg=neg)
+
+            max_y_all, _, _ = self._compute_highest_outlier(sim_lpost,
+                                                            res,
+                                                            nmax=1)
+
+        return max_y_all
+
     def _compute_highest_outlier(self, lpost, res, nmax=1):
 
         residuals = 2.0 * lpost.y/ res.mfit
@@ -767,7 +1042,7 @@ class PSDParEst(ParameterEstimation):
             else:
                 s2.plot(self.ps.freq, pldif, color='black',
                         linestyle='steps-mid')
-                s2.plot(self.ps.power, np.ones(self.ps.power.shape[0]),
+                s2.plot(self.ps.freq, np.ones_like(self.ps.power),
                         color='blue', lw=2)
 
                 s2.set_xscale("log")

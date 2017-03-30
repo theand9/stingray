@@ -242,4 +242,3 @@ def fit_lorentzians(ps, nlor, starting_pars, fit_whitenoise=True,
 
     return fit_powerspectrum(ps, model, starting_pars, max_post=max_post,
                              priors=priors, fitmethod=fitmethod)
-
