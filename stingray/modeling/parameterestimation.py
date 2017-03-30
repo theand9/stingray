@@ -577,7 +577,7 @@ class ParameterEstimation(object):
             s_all = mvn.rvs(size=nsim)
 
         else:
-            if not sample:
+            if sample is None:
                 # sample the posterior using MCMC
                 sample = self.sample(lpost1, res1.p_opt, cov=res1.cov,
                                        nwalkers=nwalkers, niter=niter,
@@ -697,7 +697,9 @@ class SamplingResults(object):
                   str(self.mean[i]) + "\t" + str(self.std[i]) + "\t" +
                   str(self.ci[0, i]) + "\t" + str(self.ci[1, i]) + "\n")
 
-    def plot_results(self, filename, nsamples=1000):
+    def plot_results(self, nsamples=1000, fig=None, save_plot=False,
+                     filename="test.pdf"):
+
         """
         Plot some results in a triangle plot.
         If installed, will use `corner` for the plotting
@@ -705,23 +707,37 @@ class SamplingResults(object):
         through pip), if not, uses its own code to make a triangle
         plot.
 
+        By default, this method returns a matplotlib.Figure object, but
+        if `save_plot=True`, the plot can be saved to file automatically,
+
         Parameters
         ----------
 
+        nsamples: int, default 1000
+            The maximum number of samples used for plotting.
+
+        fig: matplotlib.Figure instance, default None
+            If created externally, you can pass a Figure instance to this method.
+            If none is passed, the method will create one internally.
+
+        save_plot: bool, default False
+            If True, save the plot to file with a file name specified by the
+            keyword `filename`. If False, just return the `Figure` object
+
         filename: str
             Name of the output file with the figure
-        nsamples: int
-            The maximum number of samples used for plotting.
 
         """
         assert can_plot, "Need to have matplotlib installed for plotting"
         if use_corner:
-            corner.corner(self.samples, labels=None,
+            corner.corner(self.samples, labels=None, fig=fig,
                           quantiles=[0.16, 0.5, 0.84],
                           show_titles=True, title_args={"fontsize": 12})
 
         else:
-            fig = plt.figure(figsize=(15, 15))
+            if fig is None:
+                fig = plt.figure(figsize=(15, 15))
+
             plt.subplots_adjust(top=0.925, bottom=0.025,
                                 left=0.025, right=0.975,
                                 wspace=0.2, hspace=0.2)
@@ -766,9 +782,10 @@ class SamplingResults(object):
                         except ValueError:
                             print("Not making contours.")
 
-        plt.savefig(filename, format='pdf')
-        plt.close()
-        return
+        if save_plot:
+            plt.savefig(filename, format='pdf')
+
+        return fig
 
 
 class PSDParEst(ParameterEstimation):
@@ -876,6 +893,54 @@ class PSDParEst(ParameterEstimation):
                                                       neg=neg,
                                                       max_post=max_post)
         return lrt_sim
+
+
+    def calibrate_highest_outlier(self, lpost1, t1, sample=None, neg=True,
+                                  max_post=False,
+                                  nsim=1000, niter=200, nwalkers=500,
+                                  burnin=200, namestr="test"):
+
+        """
+
+        """
+        # fit the model to the data
+        res = self.fit(lpost1, t1, neg=neg)
+
+        # find the highest data/model outlier:
+        out_high = self._compute_highest_outlier(lpost1, res)
+
+        # simulate parameter sets from the simpler model
+        if not max_post:
+            # using Maximum Likelihood, so I'm going to simulate parameters
+            # from a multivariate Gaussian
+
+            # set up the distribution
+            mvn = scipy.stats.multivariate_normal(mean=res.p_opt,
+                                                  cov=res.cov)
+
+            # sample parameters
+            s_all = mvn.rvs(size=nsim)
+
+        else:
+            if sample is None:
+                # sample the posterior using MCMC
+                sample = self.sample(lpost1, res.p_opt, cov=res.cov,
+                                       nwalkers=nwalkers, niter=niter,
+                                       burnin=burnin, namestr=namestr)
+
+            # pick nsim samples out of the posterior sample
+            s_all = sample[
+                np.random.choice(sample.shape[0], nsim, replace=False)]
+
+        # simulate LRTs
+        # this method is defined in the subclasses!
+        out_high_sim = self.simulate_highest_outlier(s_all, lpost1, t1,
+                                                max_post=max_post, neg=neg)
+
+        # now I can compute the p-value:
+        pval = ParameterEstimation._compute_pvalue(out_high, out_high_sim)
+
+        return pval
 
     def simulate_highest_outlier(self, s_all, lpost, t0, max_post=True,
                                  neg=False):

@@ -115,7 +115,7 @@ def fit_powerspectrum(ps, model, starting_pars, max_post=False, priors=None,
     if priors:
         lpost = PSDPosterior(ps, model, priors=priors)
     else:
-        lpost = PSDLogLikelihood(ps.freq, ps.power, model, m=ps.m)
+        lpost = PSDLogLikelihood(ps, model)
 
     parest = PSDParEst(ps, fitmethod=fitmethod, max_post=max_post)
     res = parest.fit(lpost, starting_pars, neg=True)
