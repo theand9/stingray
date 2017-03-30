@@ -880,11 +880,11 @@ class PSDParEst(ParameterEstimation):
                                               model=lpost2.model)
             else:
                 # make a Posterior object
-                sim_lpost1 = PSDPosterior(sim_ps, lpost1.model,
-                                          priors=lpost1.priors)
+                sim_lpost1 = PSDPosterior(sim_ps, lpost1.model)
+                sim_lpost1.logprior = lpost1.logprior
 
-                sim_lpost2 = PSDPosterior(sim_ps, lpost2.model,
-                                          priors=lpost2.priors)
+                sim_lpost2 = PSDPosterior(sim_ps, lpost2.model)
+                sim_lpost2.logprior = lpost2.logprior
 
             parest_sim = PSDParEst(sim_ps, max_post=max_post)
 
@@ -963,8 +963,8 @@ class PSDParEst(ParameterEstimation):
                                               model=lpost.model)
             else:
                 # make a Posterior object
-                sim_lpost = PSDPosterior(sim_ps, lpost.model,
-                                          priors=lpost.priors)
+                sim_lpost = PSDPosterior(sim_ps, lpost.model)
+                sim_lpost.logprior = lpost.logprior
 
             parest_sim = PSDParEst(sim_ps, max_post=max_post)
 
