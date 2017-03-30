@@ -882,7 +882,7 @@ class PSDParEst(ParameterEstimation):
 
         sim_ps = copy.copy(self.ps)
 
-        sim_ps.powers = model_powers
+        sim_ps.power = model_powers
 
         return sim_ps
 
@@ -921,7 +921,7 @@ class PSDParEst(ParameterEstimation):
         return lrt_sim
 
 
-    def calibrate_highest_outlier(self, lpost1, t1, sample=None, neg=True,
+    def calibrate_highest_outlier(self, lpost, t0, sample=None,
                                   max_post=False,
                                   nsim=1000, niter=200, nwalkers=500,
                                   burnin=200, namestr="test"):
@@ -930,11 +930,10 @@ class PSDParEst(ParameterEstimation):
 
         """
         # fit the model to the data
-        res = self.fit(lpost1, t1, neg=neg)
+        res = self.fit(lpost, t0, neg=True)
 
         # find the highest data/model outlier:
-        out_high = self._compute_highest_outlier(lpost1, res)
-
+        out_high = self._compute_highest_outlier(lpost, res)
         # simulate parameter sets from the simpler model
         if not max_post:
             # using Maximum Likelihood, so I'm going to simulate parameters
@@ -950,7 +949,7 @@ class PSDParEst(ParameterEstimation):
         else:
             if sample is None:
                 # sample the posterior using MCMC
-                sample = self.sample(lpost1, res.p_opt, cov=res.cov,
+                sample = self.sample(lpost, res.p_opt, cov=res.cov,
                                        nwalkers=nwalkers, niter=niter,
                                        burnin=burnin, namestr=namestr)
 
@@ -960,16 +959,15 @@ class PSDParEst(ParameterEstimation):
 
         # simulate LRTs
         # this method is defined in the subclasses!
-        out_high_sim = self.simulate_highest_outlier(s_all, lpost1, t1,
-                                                max_post=max_post, neg=neg)
+        out_high_sim = self.simulate_highest_outlier(s_all, lpost, t0,
+                                                max_post=max_post)
 
         # now I can compute the p-value:
         pval = ParameterEstimation._compute_pvalue(out_high, out_high_sim)
 
         return pval
 
-    def simulate_highest_outlier(self, s_all, lpost, t0, max_post=True,
-                                 neg=False):
+    def simulate_highest_outlier(self, s_all, lpost, t0, max_post=True):
 
         # the number of simulations
         nsim = s_all.shape[0]
@@ -994,11 +992,10 @@ class PSDParEst(ParameterEstimation):
 
             parest_sim = PSDParEst(sim_ps, max_post=max_post)
 
-            res = parest_sim.fit(sim_lpost, t0, neg=neg)
-
-            max_y_all, _, _ = self._compute_highest_outlier(sim_lpost,
-                                                            res,
-                                                            nmax=1)
+            res = parest_sim.fit(sim_lpost, t0, neg=True)
+            max_y_all[i], maxfreq, maxind = self._compute_highest_outlier(sim_lpost,
+                                                               res,
+                                                               nmax=1)
 
         return max_y_all
 
