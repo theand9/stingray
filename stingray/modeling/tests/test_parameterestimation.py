@@ -53,7 +53,8 @@ class TestParameterEstimation(object):
             scipy.stats.norm(loc=cls.a_mean, scale=cls.a_var).pdf(amplitude)
 
         cls.priors = {"amplitude": p_amplitude}
-        cls.lpost = PSDPosterior(cls.ps, cls.model)
+        cls.lpost = PSDPosterior(cls.ps.freq, cls.ps.power, cls.model,
+                                 m=cls.ps.m)
         cls.lpost.logprior = set_logprior(cls.lpost, cls.priors)
 
     def test_par_est_initializes(self):
@@ -69,7 +70,8 @@ class TestParameterEstimation(object):
         assert pe.max_post is True, "max_post should be set to True as a default."
 
     def test_object_works_with_loglikelihood_object(self):
-        llike = PSDLogLikelihood(self.ps, self.model)
+        llike = PSDLogLikelihood(self.ps.freq, self.ps.power,
+                                 self.model, m=self.ps.m)
         pe = ParameterEstimation()
         res = pe.fit(llike, [2.0])
 
