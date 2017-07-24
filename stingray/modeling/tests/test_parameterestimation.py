@@ -135,7 +135,8 @@ class TestParameterEstimation(object):
         t0 = [2.0]
         pe = ParameterEstimation()
 
-        delta_deviance = pe.compute_lrt(self.lpost, t0, self.lpost, t0)
+        delta_deviance, opt1, opt2 = pe.compute_lrt(self.lpost, t0,
+                                                    self.lpost, t0)
 
         assert delta_deviance < 1e-7
 
