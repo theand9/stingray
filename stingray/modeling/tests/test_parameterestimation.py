@@ -175,7 +175,8 @@ class TestOptimizationResults(object):
             scipy.stats.norm(loc=cls.a_mean, scale=cls.a_var).pdf(amplitude)
 
         cls.priors = {"amplitude": p_amplitude}
-        cls.lpost = PSDPosterior(cls.ps, cls.model)
+        cls.lpost = PSDPosterior(cls.ps.freq, cls.ps.power,
+                                 cls.model, m=cls.ps.m)
         cls.lpost.logprior = set_logprior(cls.lpost, cls.priors)
 
         cls.fitmethod = "BFGS"
@@ -304,7 +305,8 @@ class TestOptimizationResultInternalFunctions(object):
                       "amplitude_0": p_amplitude_0,
                       "alpha_0": p_alpha_0}
 
-        cls.lpost = PSDPosterior(cls.ps, cls.model)
+        cls.lpost = PSDPosterior(cls.ps.freq, cls.ps.power,
+                                 cls.model, m=cls.ps.m)
         cls.lpost.logprior = set_logprior(cls.lpost, cls.priors)
 
         cls.fitmethod = "BFGS"
@@ -477,7 +479,8 @@ if can_sample:
                     amplitude)
 
             cls.priors = {"amplitude": p_amplitude}
-            cls.lpost = PSDPosterior(cls.ps, cls.model)
+            cls.lpost = PSDPosterior(cls.ps.freq, cls.ps.power,
+                                     cls.model, m=cls.ps.m)
             cls.lpost.logprior = set_logprior(cls.lpost, cls.priors)
 
             cls.fitmethod = "BFGS"
