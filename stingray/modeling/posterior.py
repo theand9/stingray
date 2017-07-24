@@ -74,7 +74,7 @@ def set_logprior(lpost, priors):
 
     Instantiate the posterior:
 
-    >>> lpost = PSDPosterior(ps, pl)
+    >>> lpost = PSDPosterior(ps.freq, ps.power, pl, m=ps.m)
 
     Define the priors:
 
