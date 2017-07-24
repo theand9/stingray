@@ -510,8 +510,6 @@ class ParameterEstimation(object):
         # cast the simulations as a numpy array
         sim = np.array(sim)
 
-        print('sim.shape:' + str(sim.shape))
-
         # find all simulations that are larger than
         # the observed value
         ntail = sim[sim > obs_val].shape[0]
@@ -938,7 +936,7 @@ class PSDParEst(ParameterEstimation):
         res = self.fit(lpost, t0, neg=True)
 
         # find the highest data/model outlier:
-        out_high = self._compute_highest_outlier(lpost, res)
+        out_high, _, _ = self._compute_highest_outlier(lpost, res)
         # simulate parameter sets from the simpler model
         if not max_post:
             # using Maximum Likelihood, so I'm going to simulate parameters
@@ -966,7 +964,6 @@ class PSDParEst(ParameterEstimation):
         # this method is defined in the subclasses!
         out_high_sim = self.simulate_highest_outlier(s_all, lpost, t0,
                                                 max_post=max_post)
-
         # now I can compute the p-value:
         pval = ParameterEstimation._compute_pvalue(out_high, out_high_sim)
 
@@ -1002,8 +999,7 @@ class PSDParEst(ParameterEstimation):
             max_y_all[i], maxfreq, maxind = self._compute_highest_outlier(sim_lpost,
                                                                res,
                                                                nmax=1)
-
-        return max_y_all
+        return np.hstack(max_y_all)
 
     def _compute_highest_outlier(self, lpost, res, nmax=1):
 
