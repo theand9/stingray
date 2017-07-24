@@ -1,14 +1,18 @@
 from __future__ import division
 
 import abc
+import warnings
 
 import numpy as np
+np.seterr('warn')
+
 from scipy.special import gamma as scipy_gamma
 from scipy.special import gammaln as scipy_gammaln
 from astropy.modeling.fitting import _fitter_to_model_params
 from astropy.modeling import models
 
 from stingray import Lightcurve, Powerspectrum
+
 
 # TODO: Add checks and balances to code
 
@@ -125,7 +129,12 @@ def set_logprior(lpost, priors):
         # correctly!
         for pname in lpost.model.param_names:
             if not lpost.model.fixed[pname]:
-                logp += np.log(priors[pname](t0[ii]))
+                with warnings.catch_warnings(record=True) as out:
+                    logp += np.log(priors[pname](t0[ii]))
+                    if len(out) > 0:
+                        if isinstance(out[0].message, RuntimeWarning):
+                            logp = np.nan
+
                 ii += 1
 
         if not np.isfinite(logp):
@@ -319,16 +328,18 @@ class PSDLogLikelihood(LogLikelihood):
 
         mean_model = self.model(self.x)
 
-        if self.m == 1:
-            loglike = -np.sum(np.log(mean_model)) - \
-                      np.sum(self.y/mean_model)
+        with warnings.catch_warnings(record=True) as out:
 
-        else:
-            loglike = -2.0*self.m*(np.sum(np.log(mean_model)) +
-                               np.sum(self.y/mean_model) +
-                               np.sum((2.0 / (2. * self.m) - 1.0) *
-                                      np.log(self.y)))
+            if self.m == 1:
+                loglike = -np.sum(np.log(mean_model)) - \
+                          np.sum(self.y/mean_model)
 
+            else:
+
+                    loglike = -2.0*self.m*(np.sum(np.log(mean_model)) +
+                                       np.sum(self.y/mean_model) +
+                                       np.sum((2.0 / (2. * self.m) - 1.0) *
+                                              np.log(self.y)))
 
         if not np.isfinite(loglike):
             loglike = logmin

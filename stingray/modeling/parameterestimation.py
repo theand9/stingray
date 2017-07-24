@@ -485,6 +485,8 @@ class ParameterEstimation(object):
         # cast the simulations as a numpy array
         sim = np.array(sim)
 
+        print('sim.shape:' + str(sim.shape))
+
         # find all simulations that are larger than
         # the observed value
         ntail = sim[sim > obs_val].shape[0]
