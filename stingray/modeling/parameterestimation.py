@@ -875,16 +875,19 @@ class PSDParEst(ParameterEstimation):
 
             # make LogLikelihood objects for both:
             if not max_post:
-                sim_lpost1 = PSDLogLikelihood(sim_ps,
+                sim_lpost1 = PSDLogLikelihood(sim_ps.freq, sim_ps.power,
                                               model=lpost1.model)
-                sim_lpost2 = PSDLogLikelihood(sim_ps,
-                                              model=lpost2.model)
+                sim_lpost2 = PSDLogLikelihood(sim_ps.freq, sim_ps.power,
+                                              model=lpost2.model, m=sim_ps.m)
             else:
                 # make a Posterior object
-                sim_lpost1 = PSDPosterior(sim_ps, lpost1.model)
+                sim_lpost1 = PSDPosterior(sim_ps.freq, sim_ps.power,
+                                          lpost1.model, m=sim_ps.m)
                 sim_lpost1.logprior = lpost1.logprior
 
-                sim_lpost2 = PSDPosterior(sim_ps, lpost2.model)
+                sim_lpost2 = PSDPosterior(sim_ps.freq, sim_ps.power,
+                                          lpost2.model, m=sim_ps.m)
+
                 sim_lpost2.logprior = lpost2.logprior
 
             parest_sim = PSDParEst(sim_ps, max_post=max_post)
@@ -958,11 +961,12 @@ class PSDParEst(ParameterEstimation):
 
             # make LogLikelihood objects for both:
             if not max_post:
-                sim_lpost = PSDLogLikelihood(sim_ps,
-                                              model=lpost.model)
+                sim_lpost = PSDLogLikelihood(sim_ps.freq, sim_ps.power,
+                                              model=lpost.model, m=sim_ps.m)
             else:
                 # make a Posterior object
-                sim_lpost = PSDPosterior(sim_ps, lpost.model)
+                sim_lpost = PSDPosterior(sim_ps.freq, sim_ps.power,
+                                         lpost.model, m=sim_ps.m)
                 sim_lpost.logprior = lpost.logprior
 
             parest_sim = PSDParEst(sim_ps, max_post=max_post)

@@ -24,7 +24,7 @@ class TestSetPrior(object):
         pl = models.PowerLaw1D()
         pl.x_0.fixed = True
 
-        cls.lpost = PSDPosterior(cls.ps, pl)
+        cls.lpost = PSDPosterior(cls.ps.freq, cls.ps.power, pl, m=cls.ps.m)
 
     def test_set_prior_runs(self):
         p_alpha = lambda alpha: ((-1. <= alpha) & (alpha <= 5.))/6.0
@@ -133,14 +133,16 @@ class TestPSDPosterior(object):
             lpost.logprior([1])
 
     def test_making_posterior(self):
-        lpost = PSDPosterior(self.ps, self.model)
+        lpost = PSDPosterior(self.ps.freq, self.ps.power,
+                             self.model, m=self.ps.m)
         lpost.logprior = set_logprior(lpost, self.priors)
 
         assert lpost.x.all() == self.ps.freq.all()
         assert lpost.y.all() == self.ps.power.all()
 
     def test_correct_number_of_parameters(self):
-        lpost = PSDPosterior(self.ps, self.model)
+        lpost = PSDPosterior(self.ps.freq, self.ps.power,
+                             self.model, m=self.ps.m)
         lpost.logprior = set_logprior(lpost, self.priors)
 
         with pytest.raises(IncorrectParameterError):
@@ -149,7 +151,8 @@ class TestPSDPosterior(object):
     def test_logprior(self):
         t0 = [2.0]
 
-        lpost = PSDPosterior(self.ps, self.model)
+        lpost = PSDPosterior(self.ps.freq, self.ps.power,
+                             self.model, m=self.ps.m)
         lpost.logprior = set_logprior(lpost, self.priors)
 
         lp_test = lpost.logprior(t0)
@@ -163,7 +166,8 @@ class TestPSDPosterior(object):
 
         loglike = -np.sum(np.log(mean_model)) - np.sum(self.ps.power/mean_model)
 
-        lpost = PSDPosterior(self.ps, self.model)
+        lpost = PSDPosterior(self.ps.freq, self.ps.power,
+                             self.model, m=self.ps.m)
         lpost.logprior = set_logprior(lpost, self.priors)
 
         loglike_test = lpost.loglikelihood(t0, neg=False)
@@ -176,7 +180,8 @@ class TestPSDPosterior(object):
         m = self.model(self.ps.freq[1:], t0)
         loglike = np.sum(self.ps.power[1:]/m + np.log(m))
 
-        lpost = PSDPosterior(self.ps, self.model)
+        lpost = PSDPosterior(self.ps.freq, self.ps.power,
+                             self.model, m=self.ps.m)
         lpost.logprior = set_logprior(lpost, self.priors)
 
         loglike_test = lpost.loglikelihood(t0, neg=True)
@@ -186,7 +191,8 @@ class TestPSDPosterior(object):
     def test_posterior(self):
         t0 = [2.0]
         m = self.model(self.ps.freq[1:], t0)
-        lpost = PSDPosterior(self.ps, self.model)
+        lpost = PSDPosterior(self.ps.freq, self.ps.power,
+                             self.model, m=self.ps.m)
         lpost.logprior = set_logprior(lpost, self.priors)
 
         post_test = lpost(t0, neg=False)
@@ -200,7 +206,8 @@ class TestPSDPosterior(object):
     def test_negative_posterior(self):
         t0 = [2.0]
         m = self.model(self.ps.freq[1:], t0)
-        lpost = PSDPosterior(self.ps, self.model)
+        lpost = PSDPosterior(self.ps.freq, self.ps.power,
+                             self.model, m=self.ps.m)
         lpost.logprior = set_logprior(lpost, self.priors)
 
         post_test = lpost(t0, neg=True)

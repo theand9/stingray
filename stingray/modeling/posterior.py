@@ -142,7 +142,7 @@ def set_logprior(lpost, priors):
 class LogLikelihood(object):
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, x, y, model):
+    def __init__(self, x, y, model, **kwargs):
         """
         x : iterable
             x-coordinate of the data. Could be multi-dimensional.
@@ -150,8 +150,13 @@ class LogLikelihood(object):
         y : iterable
             y-coordinate of the data. Could be multi-dimensional.
 
-        model: probably astropy.modeling.FittableModel instance
+        model : probably astropy.modeling.FittableModel instance
             Your model
+
+        kwargs :
+            keyword arguments specific to the individual sub-classes. For
+            details, see the respective docstrings for each subclass
+
         """
         self.x = x
         self.y = y
@@ -275,14 +280,18 @@ class PoissonLogLikelihood(LogLikelihood):
 
 class PSDLogLikelihood(LogLikelihood):
 
-    def __init__(self, ps, model):
+    def __init__(self, freq, power, model, m=1):
         """
         A Gaussian likelihood.
 
         Parameters
         ----------
-        ps: {Powerspectrum | AveragedPowerspectrum} instance
-            the Powerspectrum object containing the data
+        freq: iterable
+            Array with frequencies
+
+        power: iterable
+            Array with (averaged/singular) powers corresponding to the
+            frequencies in `freq`
 
         model: an Astropy Model instance
             The model to use in the likelihood.
@@ -292,9 +301,9 @@ class PSDLogLikelihood(LogLikelihood):
 
         """
 
-        LogLikelihood.__init__(self, ps.freq, ps.power, model)
+        LogLikelihood.__init__(self, freq, power, model)
 
-        self.m = ps.m
+        self.m = m
         self.npar = 0
         for pname in self.model.param_names:
             if not self.model.fixed[pname]:
@@ -332,7 +341,7 @@ class PSDLogLikelihood(LogLikelihood):
 
 class Posterior(object):
 
-    def __init__(self, x, y, model):
+    def __init__(self, x, y, model, **kwargs):
         """
         Define a posterior object.
 
@@ -365,6 +374,9 @@ class Posterior(object):
             The parametric model supposed to represent the data. For details
             see the astropy.modeling documentation
 
+        kwargs :
+            keyword arguments related to the subclases of `Posterior`. For
+            details, see the documentation of the individual subclasses
 
         References
         ----------
@@ -412,7 +424,7 @@ class Posterior(object):
 
 class PSDPosterior(Posterior):
 
-    def __init__(self, ps, model, priors=None):
+    def __init__(self, freq, power, model, priors=None, m=1):
         """
         Posterior distribution for power spectra.
         Uses an exponential distribution for the errors in the likelihood,
@@ -443,15 +455,15 @@ class PSDPosterior(Posterior):
             this module. Note that it is impossible to call the posterior object
             itself or the `self.logposterior` method without defining a prior.
 
+        m: int, default 1
+            The number of averaged periodograms or frequency bins in ps.
+            Useful for binned/averaged periodograms, since the value of
+            m will change the likelihood function!
+
         Attributes
         ----------
         ps: {Powerspectrum | AveragedPowerspectrum} instance
             the Powerspectrum object containing the data
-
-        m: int
-            The number of averaged periodograms or frequency bins in ps.
-            Useful for binned/averaged periodograms, since the value of
-            m will change the likelihood function!
 
         x: numpy.ndarray
             The independent variable (list of frequencies) stored in ps.freq
@@ -467,11 +479,11 @@ class PSDPosterior(Posterior):
                for a maximum likelihood-style analysis, no prior is required.
 
         """
-        self.loglikelihood = PSDLogLikelihood(ps,
-                                              model)
+        self.loglikelihood = PSDLogLikelihood(freq, power,
+                                              model, m=m)
 
-        self.m = ps.m
-        Posterior.__init__(self, ps.freq, ps.power, model)
+        self.m = m
+        Posterior.__init__(self, freq, power, model)
 
         if not priors is None:
             self.logprior = set_logprior(self, priors)
