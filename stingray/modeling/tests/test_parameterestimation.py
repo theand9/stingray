@@ -609,7 +609,8 @@ class TestPSDParEst(object):
                       "x_0_0": p_x_0_0,
                       "fwhm_0": p_fwhm_0}
 
-        cls.lpost = PSDPosterior(cls.ps, cls.model)
+        cls.lpost = PSDPosterior(cls.ps.freq, cls.ps.power,
+                                 cls.model, m=cls.ps.m)
         cls.lpost.logprior = set_logprior(cls.lpost, cls.priors)
 
         cls.fitmethod = "BFGS"
@@ -703,13 +704,14 @@ class TestPSDParEst(object):
 
     def test_fit_method_works_with_correct_parameter(self):
         pe = PSDParEst(self.ps)
-        lpost = PSDPosterior(self.ps, self.model, self.priors)
+        lpost = PSDPosterior(self.ps.freq, self.ps.power,
+                             self.model, self.priors, m=self.ps.m)
         t0 = [2.0, 1, 1, 1]
         res = pe.fit(lpost, t0)
 
     def test_fit_method_returns_optimization_results_object(self):
         pe = PSDParEst(self.ps)
-        lpost = PSDPosterior(self.ps, self.model, self.priors)
+
         t0 = [2.0, 1, 1, 1]
         res = pe.fit(self.lpost, t0)
         assert isinstance(res, OptimizationResults), "res must be of type " \
@@ -718,7 +720,8 @@ class TestPSDParEst(object):
     def test_plotfits_leahy(self):
         pe = PSDParEst(self.ps)
         t0 = [2.0, 1, 1, 1]
-        lpost = PSDPosterior(self.ps, self.model, self.priors)
+        lpost = PSDPosterior(self.ps.freq, self.ps.power,
+                             self.model, self.priors, m=self.ps.m)
 
         res = pe.fit(lpost, t0)
 
@@ -730,7 +733,8 @@ class TestPSDParEst(object):
     def test_plotfits_log_leahy(self):
         pe = PSDParEst(self.ps)
         t0 = [2.0, 1, 1, 1]
-        lpost = PSDPosterior(self.ps, self.model, self.priors)
+        lpost = PSDPosterior(self.ps.freq, self.ps.power,
+                             self.model, self.priors, m=self.ps.m)
 
         res = pe.fit(self.lpost, t0)
 
@@ -748,7 +752,8 @@ class TestPSDParEst(object):
         ps.df = self.ps.df
         ps.norm = "rms"
         pe = PSDParEst(ps)
-        lpost = PSDPosterior(self.ps, self.model, self.priors)
+        lpost = PSDPosterior(self.ps.freq, self.ps.power,
+                             self.model, self.priors, m=self.ps.m)
 
         res = pe.fit(self.lpost, t0)
 
@@ -765,7 +770,8 @@ class TestPSDParEst(object):
         ps.df = self.ps.df
         ps.norm = "rms"
         pe = PSDParEst(ps)
-        lpost = PSDPosterior(self.ps, self.model, self.priors)
+        lpost = PSDPosterior(self.ps.freq, self.ps.power,
+                             self.model, self.priors, m=self.ps.m)
 
         t0 = [2.0, 1, 1, 1]
         res = pe.fit(self.lpost, t0)
@@ -844,7 +850,8 @@ class TestPSDParEst(object):
     def test_sampler_runs(self):
 
         pe = PSDParEst(self.ps)
-        lpost = PSDPosterior(self.ps, self.model, self.priors)
+        lpost = PSDPosterior(self.ps.freq, self.ps.power,
+                             self.model, self.priors, m=self.ps.m)
 
         sample_res = pe.sample(lpost, [2.0, 0.1, 100, 2.0], nwalkers=50,
                                niter=10, burnin=15, print_results=True,
