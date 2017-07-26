@@ -570,7 +570,6 @@ class TestPSDParEst(object):
         cls.model.fwhm_0 = cls.fwhm_0
         cls.model.amplitude_0 = cls.amplitude_0
         cls.model.amplitude_1 = cls.amplitude_1
-        cls.model.x_0_0.fixed = True
 
         p = cls.model(freq)
 
@@ -729,8 +728,6 @@ class TestPSDParEst(object):
     def test_plotfits_log_leahy(self):
         pe = PSDParEst(self.ps)
         t0 = [2.0, 1, 1, 1]
-        lpost = PSDPosterior(self.ps.freq, self.ps.power,
-                             self.model, self.priors, m=self.ps.m)
 
         res = pe.fit(self.lpost, t0)
 
@@ -748,8 +745,6 @@ class TestPSDParEst(object):
         ps.df = self.ps.df
         ps.norm = "rms"
         pe = PSDParEst(ps)
-        lpost = PSDPosterior(self.ps.freq, self.ps.power,
-                             self.model, self.priors, m=self.ps.m)
 
         res = pe.fit(self.lpost, t0)
 
@@ -766,8 +761,6 @@ class TestPSDParEst(object):
         ps.df = self.ps.df
         ps.norm = "rms"
         pe = PSDParEst(ps)
-        lpost = PSDPosterior(self.ps.freq, self.ps.power,
-                             self.model, self.priors, m=self.ps.m)
 
         t0 = [2.0, 1, 1, 1]
         res = pe.fit(self.lpost, t0)
@@ -786,7 +779,6 @@ class TestPSDParEst(object):
         ps.df = self.ps.df
         ps.norm = "none"
         pe = PSDParEst(ps)
-        lpost = PSDPosterior(self.ps, self.model, self.priors)
 
         res = pe.fit(self.lpost, t0)
 
@@ -803,7 +795,6 @@ class TestPSDParEst(object):
         ps.df = self.ps.df
         ps.norm = "none"
         pe = PSDParEst(ps)
-        lpost = PSDPosterior(self.ps, self.model, self.priors)
 
         t0 = [2.0, 1, 1, 1]
         res = pe.fit(self.lpost, t0)
@@ -858,12 +849,18 @@ class TestPSDParEst(object):
     def test_generate_model_data(self):
         pe = PSDParEst(self.ps)
 
+        print("lpost.model: " + str(self.lpost.model.parameters))
+        print("lpost.model type: " + str(self.lpost.model))
+
         m = self.model
         _fitter_to_model_params(m, self.t0)
 
         model = m(self.ps.freq)
 
-        pe_model = pe._generate_model(self.lpost, self.t0)
+        print("len(t0): " + str(len(self.t0)))
+        print("lpost.npar: " + str(self.lpost.npar))
+
+        pe_model = pe._generate_model(self.lpost, [2.0, 0.1, 100, 2.0])
 
         assert np.allclose(model, pe_model)
 
@@ -945,7 +942,6 @@ class TestPSDParEst(object):
 
         lpost = PSDPosterior(ps.freq, ps.power, model, 1)
         lpost.logprior = set_logprior(lpost, priors)
-
 
         pe = PSDParEst(ps)
 
