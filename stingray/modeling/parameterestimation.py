@@ -26,6 +26,8 @@ try:
 except ImportError:
     use_corner = False
 
+import logging
+
 import numpy as np
 import scipy
 import scipy.optimize
@@ -83,7 +85,7 @@ class OptimizationResults(object):
         else:
             if comp_hessian:
                 # calculate Hessian approximating with finite differences
-                print("Approximating Hessian with finite differences ...")
+                logging.info("Approximating Hessian with finite differences ...")
 
                 phess = approx_hess(self.p_opt, lpost)
 
@@ -130,7 +132,7 @@ class OptimizationResults(object):
 
     def print_summary(self, lpost):
 
-        print("The best-fit model parameters plus errors are:")
+        logging.info("The best-fit model parameters plus errors are:")
 
         fixed = [lpost.model.fixed[n] for n in lpost.model.param_names]
         tied = [lpost.model.tied[n] for n in lpost.model.param_names]
@@ -155,21 +157,21 @@ class OptimizationResults(object):
             elif tied[i]:
                 print("{:<20.5f} (Tied) ".format(lpost.model.parameters[i]))
 
-        print("\n")
+        logging.info("\n")
 
-        print("Fitting statistics: ")
-        print(" -- number of data points: %i"%(len(lpost.x)))
+        logging.info("Fitting statistics: ")
+        logging.info(" -- number of data points: %i"%(len(lpost.x)))
 
         try:
             self.deviance
         except AttributeError:
             self._compute_criteria(lpost)
 
-        print(" -- Deviance [-2 log L] D = %f.3"%self.deviance)
-        print(" -- The Akaike Information Criterion of the model is: " +
+        logging.info(" -- Deviance [-2 log L] D = %f.3"%self.deviance)
+        logging.info(" -- The Akaike Information Criterion of the model is: " +
               str(self.aic) + ".")
 
-        print(" -- The Bayesian Information Criterion of the model is: " +
+        logging.info(" -- The Bayesian Information Criterion of the model is: " +
               str(self.bic) + ".")
 
         try:
@@ -177,14 +179,14 @@ class OptimizationResults(object):
         except AttributeError:
             self._compute_statistics(lpost)
 
-        print(" -- The figure-of-merit function for this model " +
+        logging.info(" -- The figure-of-merit function for this model " +
               " is: %f.5f"%self.merit +
               " and the fit for %i dof is %f.3f"%(self.dof,
                                                   self.merit/self.dof))
 
-        print(" -- Summed Residuals S = %f.5f"%self.sobs)
-        print(" -- Expected S ~ %f.5 +/- %f.5"%(self.sexp, self.ssd))
-        print(" -- merit function (SSE) M = %f.5f \n\n"%self.merit)
+        logging.info(" -- Summed Residuals S = %f.5f"%self.sobs)
+        logging.info(" -- Expected S ~ %f.5 +/- %f.5"%(self.sexp, self.ssd))
+        logging.info(" -- merit function (SSE) M = %f.5f \n\n"%self.merit)
 
         return
 
@@ -475,6 +477,14 @@ class ParameterEstimation(object):
             An array of model values for each bin in lpost.x
 
         """
+
+        assert isinstance(lpost, LogLikelihood) or isinstance(lpost, Posterior), \
+            "lpost must be of type LogLikelihood or Posterior or one of its " \
+            "subclasses!"
+
+        # assert pars is of correct length
+        assert len(pars) == lpost.npar, "pars must be a list " \
+                                        "of %i parameters"%lpost.npar
         # get the model
         m = lpost.model
 
@@ -515,7 +525,7 @@ class ParameterEstimation(object):
         ntail = sim[sim > obs_val].shape[0]
 
         # divide by the total number of simulations
-        pval = ntail / sim.shape[0]
+        pval = np.float(ntail) / np.float(sim.shape[0])
 
         return pval
 
@@ -669,7 +679,7 @@ class SamplingResults(object):
         try:
             self.acor = sampler.acor
         except emcee.autocorr.AutocorrError:
-            print("Chains too short to compute autocorrelation lengths.")
+            logging.info("Chains too short to compute autocorrelation lengths.")
 
         self.rhat = self._compute_rhat(sampler)
 
@@ -708,18 +718,18 @@ class SamplingResults(object):
 
         """
 
-        print("-- The acceptance fraction is: %f.5"%self.acceptance)
+        logging.info("-- The acceptance fraction is: %f.5"%self.acceptance)
         try:
-            print("-- The autocorrelation time is: %f.5"%self.acor)
+            logging.info("-- The autocorrelation time is: %f.5"%self.acor)
         except AttributeError:
             pass
-        print("R_hat for the parameters is: " + str(self.rhat))
+        logging.info("R_hat for the parameters is: " + str(self.rhat))
 
-        print("-- Posterior Summary of Parameters: \n")
-        print("parameter \t mean \t\t sd \t\t 5% \t\t 95% \n")
-        print("---------------------------------------------\n")
+        logging.info("-- Posterior Summary of Parameters: \n")
+        logging.info("parameter \t mean \t\t sd \t\t 5% \t\t 95% \n")
+        logging.info("---------------------------------------------\n")
         for i in range(self.ndim):
-            print("theta[" + str(i) + "] \t " +
+            logging.info("theta[" + str(i) + "] \t " +
                   str(self.mean[i]) + "\t" + str(self.std[i]) + "\t" +
                   str(self.ci[0, i]) + "\t" + str(self.ci[1, i]) + "\n")
 
@@ -756,7 +766,7 @@ class SamplingResults(object):
         """
         assert can_plot, "Need to have matplotlib installed for plotting"
         if use_corner:
-            corner.corner(self.samples, labels=None, fig=fig,
+            corner.corner(self.samples, labels=None, fig=fig, bins=int(20),
                           quantiles=[0.16, 0.5, 0.84],
                           show_titles=True, title_args={"fontsize": 12})
 
@@ -806,7 +816,7 @@ class SamplingResults(object):
 
                             ax.contour(xx, yy, zz, 7)
                         except ValueError:
-                            print("Not making contours.")
+                            logging.info("Not making contours.")
 
         if save_plot:
             plt.savefig(filename, format='pdf')
@@ -1019,7 +1029,7 @@ class PSDParEst(ParameterEstimation):
 
     @staticmethod
     def _find_outlier(xdata, ratio, max_y):
-        max_ind = np.where(ratio == max_y)[0][0]+1
+        max_ind = np.where(ratio == max_y)[0][0]
         max_x = xdata[max_ind]
 
         return max_x, max_ind
@@ -1028,7 +1038,7 @@ class PSDParEst(ParameterEstimation):
                  namestr='test', log=False):
 
         if not can_plot:
-            print("No matplotlib imported. Can't plot!")
+            logging.info("No matplotlib imported. Can't plot!")
         else:
             # make a figure
             f = plt.figure(figsize=(12, 10))
