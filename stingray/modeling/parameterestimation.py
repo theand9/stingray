@@ -41,9 +41,12 @@ try:
 except ImportError:
     comp_hessian = False
 
-from stingray.modeling.posterior import Posterior, LogLikelihood
 from astropy.modeling.fitting import _fitter_to_model_params, \
     _model_to_fit_params, _validate_model, _convert_input
+
+from stingray.modeling.posterior import Posterior, PSDPosterior, \
+    LogLikelihood, PSDLogLikelihood
+
 
 class OptimizationResults(object):
 
@@ -766,7 +769,7 @@ class SamplingResults(object):
         """
         assert can_plot, "Need to have matplotlib installed for plotting"
         if use_corner:
-            corner.corner(self.samples, labels=None, fig=fig, bins=int(20),
+        corner.corner(self.samples, labels=None, fig=fig, bins=int(20),
                           quantiles=[0.16, 0.5, 0.84],
                           show_titles=True, title_args={"fontsize": 12})
 
