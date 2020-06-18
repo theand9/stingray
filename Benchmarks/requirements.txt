@@ -1,0 +1,7 @@
+jupyter-notebook, jupyter-lab
+webbrowser
+snakeviz
+plotly
+pyinstrument
+memory_profiler
+stingray
