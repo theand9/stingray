@@ -5,12 +5,17 @@ import webbrowser
 
 def fileSrch(path='./'):
     """
-    Returns list of files to examine.
+    Walks through the directory and computes a list of files to examine.
 
     Parameter
     ----------
     path : str, optional, default './'
         Path to search for files.
+        
+    Returns
+    --------
+    file_list : dictionary
+        Matched files found in the current directory.
     """
     file_list = {}
 
@@ -26,6 +31,17 @@ def fileSrch(path='./'):
 
 
 def fileView(path, f_name):
+    """
+    Used to analyze desired files.
+    
+    Parameter
+    ----------
+    path : str
+        Path to file to analyze.
+        
+    f_name : str
+        Name of the file.
+    """
     cmd = f"cd {path}"
     os.system(cmd)
 
@@ -36,7 +52,10 @@ def fileView(path, f_name):
         cmd = f"snakeviz {os.path.join(path, f_name)}"
         os.system(cmd)
 
-    elif re.search(r"[\w]+\.html", f_name):
+    elif re.search(r"[\w]+_plotly\.html", f_name):
+        webbrowser.open(os.path.join(path, f_name), new=2)
+    
+    elif re.search(r"[\w]+_stat\.html", f_name):
         webbrowser.open(os.path.join(path, f_name), new=2)
 
 
@@ -54,7 +73,11 @@ if __name__ == "__main__":
 
     2 - .html file(pyInstrument)
                     -> Statistical Profiler Visualization
+    
+    3 - .html file(plotly visualization)
+                    -> %timeit and %memit Visualization
     \n""")
+    
     for k, v in file_list.items():
         print(f"{k} -> ")
         for i in v:
