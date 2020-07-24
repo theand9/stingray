@@ -1,0 +1,31 @@
+Optimizations required in stingray functions:
+
+✅ check_lightcurve -> lc_init
+✅ counts_err -> shift, change_mjdref, _add_, _sub_, operation_with_other_lc, _neg_, truncate_index,truncate_time, split, sort_time, sort_counts, join, pspec_init_
+✅ rebin_data -> rebin_sum, rebin_mean_avg, cspec_lin_rebin, pspec_rebin
+✅ join_equal_gti_boundaries -> split, analyze_lc_chunks, estimate_chunk_length
+✅ sort_counts -> sort_counts
+✅ _getitem_ -> analyze_lc_chunks, estimate_chunk_length
+✅ counts -> analyze_lc_chunks, estimate_chunk_length, join
+✅ join -> join
+✅ _fourier_cross -> cspec_init, avg_cspec_init_, pspec_init_
+✅ rms_error -> compute_rms
+✅ gti_border_bins -> cspec_init, avg_cspec_init_, avg_cspec_init_
+✅ check_gtis -> avg_cspec_init_, avg_pspec_init_
+
+operation_with_other_lc -> _add_, _sub_
+sort -> sort_time
+p_multitrial_from_single_trial -> pspec_classical_significances
+
+
+Optimizations required in other dependent libraries:
+
+np.mean -> analyze_lc_chunks, estimate_chunk_length
+np.all_close, np.is_close -> _eq_
+scipy.binned_statictic -> cspec_rebin_log
+scipy.stats.laplace -> cspec_classical_significances
+survival function(sf, scipy) -> cspec_classical_significances, pspec_classical_significances
+line 326 stingray.utils -> cspec_rebin_log
+
+
+Memory Optimizations : -
