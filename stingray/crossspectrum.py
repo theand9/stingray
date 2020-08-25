@@ -1,4 +1,3 @@
-import os
 import warnings
 from collections.abc import Iterable, Iterator
 import numpy as np
@@ -39,7 +38,6 @@ __all__ = ["Crossspectrum", "AveragedCrossspectrum",
            "coherence", "time_lag", "cospectra_pvalue",
             "normalize_crossspectrum"]
 
-CPU_COUNT = os.cpu_count()
 
 def normalize_crossspectrum(unnorm_power, tseg, nbins, nphots1, nphots2, norm="none", power_type="real"):
     """
@@ -580,13 +578,11 @@ class Crossspectrum(object):
             The squared absolute value of the Fourier amplitudes
 
         """
-        fourier_1 = fft(lc1.counts,
-                        threads=int(CPU_COUNT / 4))  # do Fourier transform 1
-        fourier_2 = fft(lc2.counts,
-                        int(CPU_COUNT / 4))  # do Fourier transform 2
+        fourier_1 = fft(lc1.counts)  # do Fourier transform 1
+        fourier_2 = fft(lc2.counts)  # do Fourier transform 2
 
         freqs = fftfreq(lc1.n, lc1.dt)
-        cross = np.multiply(fourier_1[freqs > 0], np.conj(fourier_2[freqs > 0]))
+        cross = np.multiply(fourier_1()[freqs > 0], np.conj(fourier_2()[freqs > 0]))
 
         return freqs[freqs > 0], cross
 
